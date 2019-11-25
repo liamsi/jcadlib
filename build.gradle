@@ -1,0 +1,72 @@
+buildscript {
+    repositories {
+        jcenter()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.github.jengelman.gradle.plugins:shadow:1.2.3'
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+apply plugin: 'java-library'
+apply plugin: 'jacoco'
+apply plugin: 'com.github.johnrengelman.shadow'
+
+dependencies {
+    // https://mvnrepository.com/artifact/javax.vecmath/vecmath                                              
+    implementation group: 'javax.vecmath', name: 'vecmath', version: '1.5.2'
+
+    // https://mvnrepository.com/artifact/org.tukaani/xz
+    compile group: 'org.tukaani', name: 'xz', version: '1.8'
+
+    testImplementation group: 'junit', name: 'junit', version: '4.12'                                         
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled true
+        html.enabled false
+    }
+}
+
+shadowJar {
+    zip64 true
+    baseName = project.name
+    manifest {
+        attributes 'Main-Class': 'TestJTImporter'
+    }
+
+    // Below fixes the java-library/shadowJar issue: https://github.com/johnrengelman/shadow/pull/302
+    configurations = [
+            project.configurations.compileClasspath,
+            project.configurations.runtimeClasspath
+    ]
+}
+
+def distDir = "./dist/"
+
+shadowJar.doLast {
+    copy {
+        from "$buildDir/libs/"
+        include '*-all.jar'
+        into distDir
+        println "COPYING $buildDir/libs/*-all.jar to " + distDir
+    }
+}
+
+clean.doFirst {
+    delete distDir
+}
+
+shadowJar.doFirst {
+    def dir = new File(project.projectDir, distDir)
+
+    if (!dir.exists()) {
+        dir.mkdirs()
+    }
+}
+
